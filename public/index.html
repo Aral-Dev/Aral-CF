@@ -1,0 +1,1662 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aral CF — نصب و آپدیت خودکار ورکر و دیتابیس کلودفلر</title>
+  <meta name="description" content="Aral CF؛ استقرار خودکار ورکر، دیتابیس D1 و حافظه KV روی حساب کلودفلر شما — بدون ترمینال و بدون Wrangler." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='9' y='9' width='14' height='14' transform='rotate(45 16 16)' fill='%23ff4d00'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=JetBrains+Mono:wght@400;700&family=Vazirmatn:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* ============================================================
+       ARAL CF — Design System (برگرفته از زبان بصری ARAL PANEL)
+       ============================================================ */
+    :root{
+      --bg:#070707;
+      --fire:#ff4d00;
+      --fire-soft:rgba(255,77,0,.14);
+      --neon:#00ff9d;
+      --neon-soft:rgba(0,255,157,.06);
+      --err:#ff5545;
+      --txt:#e8e6e1;
+      --body-txt:#c9c4bd;
+      --mut:#8f8a83;
+      --dim:#57534c;
+      --panel:#12100e;
+      --field:#0d0c0a;
+      --glass:rgba(18,17,16,.62);
+      --line:rgba(255,77,0,.25);
+      --hairline:rgba(255,255,255,.07);
+      --mono:'JetBrains Mono',monospace;
+      --disp:'Orbitron',monospace;
+      --fa:'Vazirmatn',sans-serif;
+    }
+
+    html{scroll-behavior:smooth}
+    /* fallback: حتی بدون Tailwind هم مخفی‌سازی کار کند */
+    .hidden{display:none!important}
+    body{
+      background:var(--bg);color:var(--txt);
+      font-family:var(--fa);line-height:1.9;
+      overflow-x:hidden;min-height:100vh;
+    }
+    ::selection{background:var(--fire);color:#000}
+
+    /* ---------- لایه‌های پس‌زمینه ---------- */
+    .bg-checker{
+      position:fixed;inset:0;z-index:-4;
+      background-image:
+        linear-gradient(45deg,#0d0c0b 25%,transparent 25%),
+        linear-gradient(-45deg,#0d0c0b 25%,transparent 25%),
+        linear-gradient(45deg,transparent 75%,#0d0c0b 75%),
+        linear-gradient(-45deg,transparent 75%,#0d0c0b 75%);
+      background-size:42px 42px;
+      background-position:0 0,0 21px,21px -21px,-21px 0;
+      animation:checker 22s linear infinite;
+      opacity:.5;
+    }
+    .bg-grid{
+      position:fixed;inset:0;z-index:-3;
+      background-image:
+        linear-gradient(var(--line) 1px,transparent 1px),
+        linear-gradient(90deg,var(--line) 1px,transparent 1px);
+      background-size:64px 64px;
+      -webkit-mask-image:radial-gradient(ellipse 70% 60% at 50% 30%,#000 30%,transparent 75%);
+      mask-image:radial-gradient(ellipse 70% 60% at 50% 30%,#000 30%,transparent 75%);
+    }
+    .bg-scan{
+      position:fixed;inset:0;z-index:-2;pointer-events:none;
+      background:repeating-linear-gradient(0deg,transparent 0 3px,rgba(0,0,0,.12) 3px 4px);
+    }
+    .bg-beam{
+      position:fixed;width:140vmax;height:140vmax;z-index:-2;
+      pointer-events:none;opacity:.05;
+      background:conic-gradient(from 0deg,transparent 0deg,var(--fire) 4deg,transparent 8deg);
+      border-radius:50%;
+      animation:radar 9s linear infinite;
+    }
+    @keyframes checker{to{background-position:42px 42px,42px 63px,63px 21px,21px 63px}}
+    @keyframes radar{to{transform:rotate(360deg)}}
+    @keyframes gl1{0%,92%{transform:none;opacity:0}93%{transform:translate(-3px,2px);opacity:.8}96%{transform:translate(3px,-2px);opacity:.8}100%{transform:none;opacity:0}}
+    @keyframes gl2{0%,90%{transform:none;opacity:0}91%{transform:translate(3px,1px);opacity:.7}95%{transform:translate(-3px,-1px);opacity:.7}100%{transform:none;opacity:0}}
+
+    /* ---------- پری‌لودر ---------- */
+    #preloader{
+      position:fixed;inset:0;z-index:100;background:var(--bg);
+      display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;
+      transition:opacity .5s;
+    }
+    #preloader.off{opacity:0;pointer-events:none}
+    .pre-glitch{
+      font-family:var(--disp);font-weight:900;font-size:clamp(24px,5vw,44px);
+      letter-spacing:.18em;color:var(--txt);position:relative;direction:ltr;
+    }
+    .pre-glitch::before,.pre-glitch::after{content:attr(data-text);position:absolute;inset:0}
+    .pre-glitch::before,.pre-glitch::after{content:attr(data-text) / ""}
+    .pre-glitch::before{color:var(--fire);animation:gl1 2.1s infinite steps(1)}
+    .pre-glitch::after{color:var(--neon);animation:gl2 1.7s infinite steps(1)}
+    .pre-bar{width:180px;height:2px;background:rgba(255,255,255,.08);overflow:hidden}
+    .pre-bar i{display:block;height:100%;width:40%;background:var(--fire);animation:loading 1.1s ease-in-out infinite}
+    @keyframes loading{0%{transform:translateX(160%)}100%{transform:translateX(-260%)}}
+
+    /* ---------- اسکرول‌بار ---------- */
+    ::-webkit-scrollbar{width:10px;height:10px}
+    ::-webkit-scrollbar-track{background:var(--bg)}
+    ::-webkit-scrollbar-thumb{background:#1c1a18;border:1px solid rgba(255,255,255,.08)}
+    ::-webkit-scrollbar-thumb:hover{background:var(--fire)}
+
+    /* ---------- چیدمان کلی ---------- */
+    .wrap{max-width:920px;margin:0 auto;padding:26px 18px 90px}
+    @media(max-width:640px){.wrap{padding:16px 12px 70px}}
+
+    /* ---------- گلس و پنل‌ها ---------- */
+    .glass{
+      background:var(--glass);
+      backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+      border:1px solid var(--hairline);
+      clip-path:polygon(16px 0,100% 0,100% calc(100% - 16px),calc(100% - 16px) 100%,0 100%,0 16px);
+    }
+    .panel{padding:24px 24px 28px;position:relative}
+    .panel::before{
+      content:"";position:absolute;top:0;right:0;width:70px;height:2px;
+      background:linear-gradient(90deg,var(--fire),transparent);
+    }
+
+    /* ---------- سربرگ ---------- */
+    .topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 20px;margin-bottom:42px}
+    .logo{font-family:var(--disp);font-weight:700;font-size:17px;letter-spacing:.12em;display:flex;align-items:center;gap:10px;direction:ltr}
+    .logo b{color:var(--fire)}
+    .logo-mark{width:10px;height:10px;background:var(--fire);box-shadow:0 0 12px var(--fire);transform:rotate(45deg);flex:none}
+    .top-tag{font-family:var(--mono);font-size:10px;color:var(--mut);letter-spacing:.22em;direction:ltr;white-space:nowrap}
+    @media(max-width:640px){.top-tag{display:none}}
+
+    /* ---------- قهرمان صفحه ---------- */
+    .hero{text-align:center;margin-bottom:46px}
+    .hero h1{font-size:clamp(26px,5.5vw,42px);font-weight:800;position:relative;display:inline-block}
+    .hero h1::before,.hero h1::after{content:attr(data-text);position:absolute;inset:0}
+    /* نحو متن جایگزین: اسکرین‌ریدر لایه‌های گلیچ را نخواند */
+    .hero h1::before,.hero h1::after{content:attr(data-text) / ""}
+    .hero h1::before{color:var(--fire);animation:gl1 3.4s infinite steps(1)}
+    .hero h1::after{color:var(--neon);animation:gl2 2.8s infinite steps(1)}
+    .hero-sub{max-width:640px;margin:16px auto 0;color:var(--mut);font-size:15px}
+    .hero-sub b{color:var(--txt)}
+
+    /* ---------- نوار تب‌ها ---------- */
+    .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:22px}
+    .tab{
+      font-family:var(--fa);font-weight:700;font-size:13px;cursor:pointer;
+      padding:11px 8px;background:var(--panel);color:var(--mut);
+      border:1px solid var(--hairline);
+      clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
+      transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px;
+    }
+    .tab:hover{color:var(--txt);border-color:var(--line)}
+    .tab.active{background:var(--fire);border-color:var(--fire);color:#000;box-shadow:0 0 22px rgba(255,77,0,.35)}
+    .tab.active-acc{background:var(--neon);border-color:var(--neon);color:#000;box-shadow:0 0 22px rgba(0,255,157,.3)}
+
+    /* ---------- استپر ---------- */
+    .stepper-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+    .stepper-badge{
+      font-family:var(--mono);font-size:11px;color:var(--fire);
+      border:1px solid var(--line);background:var(--fire-soft);
+      padding:2px 12px;letter-spacing:.06em;
+    }
+    .stepper-track{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+    .stepper-track i{height:4px;background:#1c1a18;border:1px solid rgba(255,255,255,.05);transition:all .3s}
+    .stepper-track i.on{background:var(--fire);border-color:var(--fire);box-shadow:0 0 10px rgba(255,77,0,.5)}
+
+    /* ---------- تیتر بخش‌ها ---------- */
+    .panel-head{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+    .panel-head h2{font-size:17px;font-weight:800;color:var(--txt)}
+    .step-num{
+      font-family:var(--disp);font-weight:700;font-size:14px;color:var(--fire);
+      border:1px solid var(--line);padding:3px 11px;flex:none;
+    }
+    .req-badge{
+      font-size:11px;color:var(--neon);border:1px solid rgba(0,255,157,.3);
+      padding:2px 10px;background:var(--neon-soft);
+      font-family:var(--mono);direction:ltr;white-space:nowrap;
+    }
+    .req-badge-fire{
+      font-size:11px;color:var(--fire);border:1px solid var(--line);
+      padding:2px 10px;background:var(--fire-soft);
+      font-family:var(--mono);direction:ltr;white-space:nowrap;
+    }
+
+    /* ---------- فرم‌ها ---------- */
+    .field-label{font-size:12.5px;color:var(--mut);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .inp{
+      width:100%;direction:ltr;text-align:left;
+      background:var(--field);border:1px solid rgba(255,255,255,.12);color:var(--txt);
+      font-family:var(--mono);font-size:13px;padding:11px 14px;outline:none;
+      transition:border-color .2s, box-shadow .2s;
+    }
+    .inp::placeholder{color:var(--dim)}
+    .inp:focus{border-color:var(--fire);box-shadow:0 0 0 2px var(--fire-soft)}
+    textarea.inp{resize:vertical;line-height:1.7}
+    select.inp{
+      appearance:none;-webkit-appearance:none;cursor:pointer;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238f8a83' stroke-width='2' fill='none'/%3E%3C/svg%3E");
+      background-repeat:no-repeat;background-position:left 14px center;
+      padding-left:34px;
+    }
+    .inp:disabled{opacity:.5;cursor:not-allowed}
+
+    .btn-link{color:var(--fire);font-size:12px;font-weight:600;cursor:pointer;transition:color .2s}
+    .btn-link:hover{color:#ff8a5c;text-decoration:underline;text-underline-offset:3px}
+    .btn-link-err{color:var(--err);font-size:12px;font-weight:600;cursor:pointer;transition:color .2s}
+    .btn-link-err:hover{color:#ff8a80}
+
+    .btn{
+      display:inline-flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;
+      font-family:var(--fa);font-weight:800;font-size:14px;
+      padding:11px 26px;border:1px solid var(--fire);
+      color:#000;background:var(--fire);
+      clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
+      transition:all .2s;
+    }
+    .btn:hover{box-shadow:0 0 24px rgba(255,77,0,.55);transform:translateY(-1px)}
+    .btn:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
+    .btn-ghost{
+      display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;
+      font-family:var(--fa);font-weight:600;font-size:13px;
+      padding:10px 22px;border:1px solid rgba(255,255,255,.16);color:var(--body-txt);background:var(--panel);
+      clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
+      transition:all .2s;
+    }
+    .btn-ghost:hover{color:var(--fire);border-color:var(--fire)}
+    .btn-ghost:disabled{opacity:.45;cursor:not-allowed}
+    .btn-mono{
+      font-family:var(--mono);font-size:11px;letter-spacing:.06em;cursor:pointer;
+      background:var(--panel);border:1px solid rgba(255,255,255,.14);color:var(--body-txt);
+      padding:6px 14px;transition:all .2s;
+    }
+    .btn-mono:hover{color:var(--fire);border-color:var(--fire)}
+
+    /* چک‌باکس‌های ساده */
+    .chk{width:16px;height:16px;accent-color:var(--fire);cursor:pointer;flex:none}
+
+    /* ---------- سوییچ‌ها ---------- */
+    .switch-row{
+      display:flex;align-items:center;justify-content:space-between;gap:14px;
+      background:var(--field);border:1px solid rgba(255,255,255,.1);
+      padding:14px 16px;cursor:pointer;transition:border-color .2s;
+    }
+    .switch-row:hover{border-color:rgba(255,255,255,.2)}
+    .switch-row.locked{opacity:.75;cursor:not-allowed}
+    .sw-title{font-size:13.5px;font-weight:600;color:var(--txt);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+    .sw-sub{font-size:11px;color:var(--mut);margin-top:2px}
+    .sw{position:relative;width:44px;height:24px;flex:none}
+    .sw input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+    .sw i{
+      position:absolute;inset:0;display:block;background:#1c1a18;
+      border:1px solid rgba(255,255,255,.14);transition:all .2s;pointer-events:none;
+      clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+    }
+    .sw i::after{
+      content:"";position:absolute;top:3px;right:3px;width:16px;height:16px;
+      background:var(--dim);transition:all .2s;
+    }
+    .sw input:checked + i{background:var(--fire);border-color:var(--fire);box-shadow:0 0 12px rgba(255,77,0,.5)}
+    .sw input:checked + i::after{transform:translateX(-20px);background:#000}
+    .sw input:disabled + i{opacity:.45}
+    .lock-badge{
+      font-size:10px;color:#ffb888;background:rgba(255,77,0,.1);
+      border:1px solid var(--line);padding:1px 8px;font-weight:500;
+    }
+
+    /* ---------- گزینه‌های الگو (Preset) ---------- */
+    .preset{
+      background:var(--field);border:1px solid rgba(255,255,255,.1);cursor:pointer;
+      padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:2px;
+      transition:all .2s;text-align:center;
+      clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);
+    }
+    .preset:hover{border-color:var(--line)}
+    .preset .p-emoji{font-size:18px;line-height:1.4}
+    .preset .p-name{font-size:12px;font-weight:700;color:var(--body-txt)}
+    .preset .p-tag{font-family:var(--mono);font-size:9.5px;color:var(--dim);direction:ltr}
+    .preset.active{border-color:var(--fire);background:var(--fire-soft);box-shadow:0 0 16px rgba(255,77,0,.25)}
+    .preset.active .p-name{color:var(--fire)}
+
+    /* ---------- باکس‌های راهنما و هشدار ---------- */
+    .hint-box{
+      background:var(--fire-soft);border:1px solid var(--line);
+      padding:12px 14px;font-size:11.5px;color:#ffb888;line-height:1.9;
+    }
+    .hint-box .hb-title{font-weight:700;color:var(--fire);display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:12px}
+    .hint-box ol{list-style:decimal;padding-right:18px;margin:4px 0 0}
+    .hint-box li{margin-bottom:4px;color:#f0b27f}
+    .hint-box b{color:var(--txt)}
+    .hint-box code{font-family:var(--mono);background:rgba(0,0,0,.4);padding:1px 6px;direction:ltr;display:inline-block}
+    .cmd-box{
+      direction:ltr;font-family:var(--mono);text-align:center;
+      background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.08);
+      padding:5px 8px;margin-top:6px;font-size:11.5px;color:var(--body-txt);user-select:all;
+    }
+    .cmd-box mark{background:none;color:var(--fire);font-weight:700}
+
+    /* ---------- جدول بازبینی (مرحله ۴) ---------- */
+    .rev-box{background:var(--field);border:1px solid rgba(255,255,255,.1);padding:6px 16px;font-size:13px}
+    .rev-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px dashed rgba(255,255,255,.08)}
+    .rev-row:last-child{border-bottom:none}
+    .rev-row .r-label{color:var(--mut);font-size:12px;flex:none}
+    .rev-row .r-val{font-family:var(--mono);direction:ltr;text-align:left;color:var(--body-txt);font-size:12px;word-break:break-word}
+    .rev-row .r-val.fire{color:var(--fire)}
+
+    /* ---------- خروجی عملیات ---------- */
+    .out-box{padding:16px;font-family:var(--mono);font-size:12px;white-space:pre-wrap;line-height:2;direction:rtl;text-align:right}
+    .out-idle{background:var(--field);border:1px solid rgba(255,255,255,.1);color:var(--body-txt)}
+    .out-ok{background:var(--neon-soft);border:1px solid rgba(0,255,157,.35);color:#a9ffd9}
+    .out-err{background:rgba(255,85,69,.07);border:1px solid rgba(255,85,69,.4);color:#ffb0a8}
+    .link-row{
+      direction:ltr;display:flex;align-items:center;justify-content:space-between;gap:10px;
+      background:rgba(0,0,0,.4);border:1px solid rgba(0,255,157,.25);padding:10px 12px;
+    }
+    .link-row a{font-family:var(--mono);font-size:11.5px;color:var(--neon);word-break:break-all;transition:color .2s}
+    .link-row a:hover{color:#7dffca;text-decoration:underline}
+
+    /* ---------- چیپ‌ها و برچسب‌ها ---------- */
+    .tag{
+      font-family:var(--mono);font-size:10.5px;padding:2px 9px;
+      cursor:pointer;user-select:all;transition:filter .15s;direction:ltr;
+      word-break:break-all;text-align:left;
+    }
+    .tag:hover{filter:brightness(1.35)}
+    .tag-fire{background:rgba(255,77,0,.08);border:1px solid rgba(255,77,0,.35);color:#ffab84}
+    .tag-neon{background:rgba(0,255,157,.06);border:1px solid rgba(0,255,157,.3);color:#7dffca}
+    .tag-err{background:rgba(255,85,69,.08);border:1px solid rgba(255,85,69,.35);color:#ff9d92}
+    .tag-mut{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.14);color:#c9c4bd}
+    .tag-dim{background:var(--panel);border:1px solid rgba(255,255,255,.1);color:var(--mut)}
+    .tag-none{font-size:11px;color:var(--dim);font-style:italic;font-family:var(--fa)}
+
+    /* ---------- آکاردئون ---------- */
+    .acc-head{
+      width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;
+      background:var(--panel);border:none;border-bottom:1px solid transparent;
+      padding:13px 16px;cursor:pointer;font-family:var(--fa);font-size:12.5px;font-weight:700;color:var(--body-txt);
+      transition:color .2s;
+    }
+    .acc-head:hover{color:var(--txt)}
+    .acc-body{border-top:1px solid rgba(255,255,255,.08);padding:16px}
+    .acc-arrow{transition:transform .2s;flex:none}
+
+    /* ---------- ردیف گزینه (چک‌باکس وسط ردیف) ---------- */
+    .opt-row{
+      display:flex;align-items:center;justify-content:space-between;gap:12px;
+      background:var(--field);border:1px solid rgba(255,255,255,.1);
+      padding:12px 16px;cursor:pointer;font-size:12.5px;font-weight:600;color:var(--body-txt);
+      transition:border-color .2s;
+    }
+    .opt-row:hover{border-color:rgba(255,255,255,.2)}
+
+    /* ---------- کارت نتیجه AI ---------- */
+    .ai-card{background:var(--field);border:1px solid rgba(255,255,255,.1);padding:14px 16px}
+    .ai-card-title{font-size:12px;font-weight:700;color:var(--mut);display:flex;align-items:center;gap:7px}
+    .ai-count{font-family:var(--mono);font-size:10px;color:var(--dim);direction:ltr}
+
+    /* ---------- فوتر ---------- */
+    .foot{
+      margin-top:34px;text-align:center;
+      font-family:var(--mono);font-size:10px;color:var(--dim);
+      letter-spacing:.22em;direction:ltr;
+      display:flex;align-items:center;justify-content:center;gap:12px;
+    }
+    .foot .dot{width:6px;height:6px;background:var(--neon);box-shadow:0 0 8px var(--neon);border-radius:50%;animation:pulse 2s infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+    .divider{border:none;border-top:1px solid var(--hairline);margin:18px 0}
+  </style>
+</head>
+<body>
+  <div class="bg-checker"></div>
+  <div class="bg-grid"></div>
+  <div class="bg-scan"></div>
+  <div class="bg-beam" style="top:-70vmax;left:-20vmax"></div>
+
+  <!-- پری‌لودر بوت -->
+  <div id="preloader">
+    <div class="pre-glitch" data-text="ARAL CF">ARAL CF</div>
+    <div class="pre-bar"><i></i></div>
+  </div>
+
+  <div class="wrap">
+
+    <!-- سربرگ -->
+    <header class="topbar glass">
+      <div class="logo"><span class="logo-mark"></span>ARAL<b>CF</b></div>
+      <div class="top-tag">ARAL&nbsp;&rarr;&nbsp;CLOUDFLARE&nbsp;WORKER&nbsp;AUTO-DEPLOYER</div>
+    </header>
+
+    <!-- قهرمان صفحه -->
+    <section class="hero">
+      <h1 class="glitch" data-text="استقرار خودکار ورکر روی کلادفلر">استقرار خودکار ورکر روی کلادفلر</h1>
+      <p class="hero-sub">
+        هر اسکریپت ورکر را فقط با یک لینک، بدون ترمینال و بدون Wrangler روی حساب کلودفلر خودت نصب یا به‌روزرسانی کن؛
+        دیتابیس <b>D1</b> و حافظه <b>KV</b> هم خودکار ساخته و متصل می‌شوند.
+      </p>
+    </section>
+
+    <!-- نوار تب‌ها -->
+    <div class="tabs" role="tablist">
+      <button type="button" id="tab-btn-deploy" onclick="switchAppTab('deploy')" class="tab active">
+        <span>🚀</span><span>استقرار ورکر</span>
+      </button>
+      <button type="button" id="tab-btn-sub" onclick="switchAppTab('sub')" class="tab">
+        <span>⚡</span><span>بهینه‌ساز ساب</span>
+      </button>
+      <button type="button" id="tab-btn-ai" onclick="switchAppTab('ai')" class="tab">
+        <span>🧠</span><span>آنالیز با AI</span>
+      </button>
+    </div>
+
+    <!-- کارت اصلی -->
+    <main class="glass">
+
+      <!-- سربرگ کارت + استپر -->
+      <div id="deploy-stepper-container" class="p-6 border-b border-white/5">
+        <div class="stepper-head">
+          <span class="text-xs" style="color:var(--mut)">پیشرفت فرآیند استقرار:</span>
+          <span id="stepBadge" class="stepper-badge">مرحله ۱ از ۴</span>
+        </div>
+        <div class="stepper-track">
+          <i id="bar-1" class="on"></i>
+          <i id="bar-2"></i>
+          <i id="bar-3"></i>
+          <i id="bar-4"></i>
+        </div>
+      </div>
+
+      <!-- فرم مرحله‌به‌مرحله استقرار -->
+      <form id="wizardForm" class="p-6 space-y-6" novalidate>
+
+        <!-- ═══ گام ۱: مشخصات حساب ═══ -->
+        <div id="step-1" class="space-y-5">
+          <div class="flex justify-between items-center flex-wrap gap-2">
+            <div class="panel-head" style="margin-bottom:0">
+              <span class="step-num">۰۱</span>
+              <h2>مشخصات حساب و توکن کلودفلر</h2>
+            </div>
+            <button type="button" id="clearStorageBtn" onclick="clearStoredCredentials()" class="btn-link-err hidden">
+              ✕ پاک کردن اطلاعات ذخیره‌شده
+            </button>
+          </div>
+
+          <div>
+            <label class="field-label" for="accountId">Account ID کلودفلر <span class="text-[10px]" style="color:var(--fire)">* اجباری</span></label>
+            <input type="text" id="accountId" dir="ltr" required placeholder="شناسه ۳۲ حرفی اکانت شما" class="inp" autocomplete="off" />
+            <div class="hint-box mt-2">
+              <div class="hb-title"><span>▣</span><span>نحوه پیدا کردن Account ID:</span></div>
+              در پنل کلودفلر وارد بخش <b>Workers &amp; Pages</b> شوید و از نوار آدرس مرورگر، مقدار بین نشانی را کپی کنید:
+              <div class="cmd-box">https://dash.cloudflare.com/<mark>[account-id]</mark>/workers-and-pages</div>
+            </div>
+          </div>
+
+          <div>
+            <div class="field-label">
+              <label for="apiToken">API Token کلودفلر <span class="text-[10px]" style="color:var(--fire)">* اجباری</span></label>
+              <a href="https://dash.cloudflare.com/profile/api-tokens?permissionGroupKeys=%5B%7B%22key%22%3A%22workers_scripts%22%2C%22type%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22d1%22%2C%22type%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22workers_kv_storage%22%2C%22type%22%3A%22edit%22%7D%2C%7B%22key%22%3A%22account_settings%22%2C%22type%22%3A%22read%22%7D%2C%7B%22key%22%3A%22account_analytics%22%2C%22type%22%3A%22read%22%7D%5D&accountId=*&zoneId=all&name=Aral%20CF%20Deployer" target="_blank" rel="noopener noreferrer" class="btn-link">
+                ساخت خودکار توکن API ↗
+              </a>
+            </div>
+            <input type="password" id="apiToken" dir="ltr" required placeholder="توکن با دسترسی Workers و D1" class="inp" autocomplete="off" />
+          </div>
+
+          <label class="flex items-center gap-2 cursor-pointer select-none pt-1">
+            <input type="checkbox" id="saveCredentials" class="chk" checked />
+            <span class="text-xs" style="color:var(--mut)">ذخیره امن و انکودشده اطلاعات در مرورگر برای دفعات بعد</span>
+          </label>
+        </div>
+
+        <!-- ═══ گام ۲: سورس و تنظیمات ورکر ═══ -->
+        <div id="step-2" class="space-y-5 hidden">
+          <div class="panel-head" style="margin-bottom:0">
+            <span class="step-num">۰۲</span>
+            <h2>سورس کد و تنظیمات ورکر</h2>
+          </div>
+
+          <!-- الگوهای آماده -->
+          <div>
+            <label class="field-label"><span class="inline-block w-2 h-2" style="background:var(--fire)"></span> الگوی آماده پروژه (انتخاب سریع تنظیمات):</label>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <button type="button" onclick="selectPreset('nahan')" id="btn-preset-nahan" class="preset active">
+                <span class="p-emoji">🛡️</span>
+                <span class="p-name">نهان (Nahan)</span>
+                <span class="p-tag">IOT_DB</span>
+              </button>
+              <button type="button" onclick="selectPreset('nahanmini')" id="btn-preset-nahanmini" class="preset">
+                <span class="p-emoji">🌿</span>
+                <span class="p-name">نهان‌مینی (Mini)</span>
+                <span class="p-tag">DB</span>
+              </button>
+              <button type="button" onclick="selectPreset('zeus')" id="btn-preset-zeus" class="preset">
+                <span class="p-emoji">⚡</span>
+                <span class="p-name">زئوس (Zeus)</span>
+                <span class="p-tag">DB</span>
+              </button>
+              <button type="button" onclick="selectPreset('custom')" id="btn-preset-custom" class="preset">
+                <span class="p-emoji">🛠️</span>
+                <span class="p-name">سفارشی</span>
+                <span class="p-tag">CUSTOM URL</span>
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <div class="field-label">
+              <label for="workerName">نام ورکر (Worker Name) <span class="text-[10px]" style="color:var(--fire)">* اجباری</span></label>
+              <button type="button" onclick="generateRandomName()" class="btn-link">🎲 تولید نام رندوم</button>
+            </div>
+            <input type="text" id="workerName" dir="ltr" required placeholder="اگر نام ورکر قبلی را بزنید، آپدیت می‌شود" class="inp" autocomplete="off" />
+            <p class="text-[11px] mt-1" style="color:var(--dim)">💡 برای آپدیت یک ورکر موجود، کافیست همان نام قبلی را وارد کنید.</p>
+          </div>
+
+          <div>
+            <label class="field-label" for="scriptUrl">آدرس مستقیم سورس کد ورکر (Raw URL) <span class="text-[10px]" style="color:var(--fire)">* اجباری</span></label>
+            <input type="url" id="scriptUrl" dir="ltr" required placeholder="https://raw.githubusercontent.com/.../worker.js" class="inp" autocomplete="off" />
+          </div>
+
+          <!-- دامنه اختصاصی -->
+          <div class="space-y-2">
+            <label class="field-label" for="customDomain">دامنه یا ساب‌دامنه اختصاصی ورکر (Custom Domain — اختیاری)</label>
+            <input type="text" id="customDomain" dir="ltr" placeholder="مثال: sub.yourdomain.com یا panel.mydomain.ir" class="inp" autocomplete="off" />
+            <div class="hint-box">
+              <div class="hb-title"><span>⚠</span><span>راهنمای مهم اتصال دامنه اختصاصی:</span></div>
+              <ol>
+                <li><b>ثبت دامنه اصلی در کلودفلر:</b> دامنه والد شما (مثلاً <code>yourdomain.com</code>) باید از قبل در پنل همین اکانت کلودفلر اضافه شده و فعال (Active) باشد.</li>
+                <li><b>تعریف ساب‌دامنه دلخواه:</b> در کادر بالا یک ساب‌دامنه دلخواه (مانند <code>panel.yourdomain.com</code>) وارد کنید. نیازی به ساخت دستی رکورد DNS نیست؛ کلودفلر خودکار آن را به ورکر متصل و SSL صادر می‌کند.</li>
+                <li><b>دور زدن فیلترینگ workers.dev:</b> با اتصال دامنه اختصاصی، دیگر با مشکل فیلتر بودن دامنه پیش‌فرض کلودفلر مواجه نخواهید شد.</li>
+              </ol>
+            </div>
+          </div>
+
+          <!-- سوئیچ مبهم‌سازی -->
+          <label id="obfuscationLabel" class="switch-row" for="enableObfuscation">
+            <div class="flex flex-col ml-3">
+              <div class="sw-title">
+                <span>مبهم‌سازی سورس کد (Code Obfuscator)</span>
+                <span id="nahanObfBadge" class="lock-badge hidden">سورس نهان از پیش مبهم‌سازی شده است</span>
+              </div>
+              <span id="obfSubtext" class="sw-sub">رمزنگاری رشته‌ها با XOR/Base64 برای جلوگیری از خوانده‌شدن سورس کد</span>
+            </div>
+            <span class="sw">
+              <input type="checkbox" id="enableObfuscation" checked>
+              <i></i>
+            </span>
+          </label>
+
+          <!-- سوئیچ بازسازی -->
+          <label class="switch-row" for="recreateWorker">
+            <div class="flex flex-col ml-3">
+              <span class="sw-title">حذف و بازسازی مجدد ورکر (Clean Rebuild)</span>
+              <span class="sw-sub">در صورت وجود ورکر با همین نام، ابتدا آن را حذف و سپس از صفر ایجاد می‌کند</span>
+            </div>
+            <span class="sw">
+              <input type="checkbox" id="recreateWorker">
+              <i></i>
+            </span>
+          </label>
+        </div>
+
+        <!-- ═══ گام ۳: ذخیره‌سازی داده ═══ -->
+        <div id="step-3" class="space-y-5 hidden">
+          <div class="panel-head" style="margin-bottom:0">
+            <span class="step-num">۰۳</span>
+            <h2>ذخیره‌سازی داده (D1 و KV — اختیاری)</h2>
+          </div>
+
+          <!-- D1 -->
+          <label class="switch-row" for="enableD1">
+            <span class="sw-title">اتصال پایگاه‌داده ابری D1</span>
+            <span class="sw">
+              <input type="checkbox" id="enableD1" onchange="toggleD1Fields()">
+              <i></i>
+            </span>
+          </label>
+
+          <div id="d1Fields" class="space-y-4 hidden pt-1">
+            <div>
+              <div class="field-label">
+                <label for="d1Name">نام دیتابیس D1 <span class="text-[10px]" style="color:var(--fire)">* اجباری</span></label>
+                <button type="button" onclick="generateRandomD1Name()" class="btn-link">🎲 تولید نام رندوم</button>
+              </div>
+              <input type="text" id="d1Name" dir="ltr" placeholder="اگر دیتابیس وجود داشته باشد به آن متصل می‌شود" class="inp" autocomplete="off" />
+            </div>
+            <div>
+              <label class="field-label" for="bindingName">نام متغیر بایندینگ D1 در کد <span class="text-[10px]" style="color:var(--fire)">* اجباری</span></label>
+              <input type="text" id="bindingName" dir="ltr" value="DB" placeholder="مثال: DB یا IOT_DB" class="inp" autocomplete="off" />
+            </div>
+          </div>
+
+          <!-- KV -->
+          <label class="switch-row" for="enableKV">
+            <span class="sw-title">اتصال حافظه کلید-مقدار (KV Namespace)</span>
+            <span class="sw">
+              <input type="checkbox" id="enableKV" onchange="toggleKVFields()">
+              <i></i>
+            </span>
+          </label>
+
+          <div id="kvFields" class="space-y-4 hidden pt-1">
+            <div>
+              <div class="field-label">
+                <label for="kvName">نام KV Namespace <span class="text-[10px]" style="color:var(--fire)">* اجباری</span></label>
+                <button type="button" onclick="generateRandomKVName()" class="btn-link">🎲 تولید نام رندوم</button>
+              </div>
+              <input type="text" id="kvName" dir="ltr" placeholder="نام فضای ذخیره‌سازی KV" class="inp" autocomplete="off" />
+            </div>
+            <div>
+              <label class="field-label" for="kvBindingName">نام متغیر بایندینگ KV در کد (KV Binding Name) <span class="text-[10px]" style="color:var(--fire)">* اجباری</span></label>
+              <input type="text" id="kvBindingName" dir="ltr" value="KV" placeholder="مثال: KV یا MY_KV" class="inp" autocomplete="off" />
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══ گام ۴: تایید نهایی ═══ -->
+        <div id="step-4" class="space-y-5 hidden">
+          <div class="panel-head" style="margin-bottom:0">
+            <span class="step-num">۰۴</span>
+            <h2>تایید نهایی و استقرار</h2>
+          </div>
+
+          <div class="rev-box">
+            <div class="rev-row">
+              <span class="r-label">نام ورکر:</span>
+              <span id="reviewWorkerName" class="r-val fire">-</span>
+            </div>
+            <div class="rev-row">
+              <span class="r-label">وضعیت مبهم‌سازی (Obfuscation):</span>
+              <span id="reviewObfuscation" class="r-val">-</span>
+            </div>
+            <div class="rev-row">
+              <span class="r-label">نحوه استقرار ورکر:</span>
+              <span id="reviewRecreate" class="r-val">-</span>
+            </div>
+            <div class="rev-row">
+              <span class="r-label">دامنه اختصاصی:</span>
+              <span id="reviewCustomDomain" class="r-val fire">غیرفعال</span>
+            </div>
+            <div class="rev-row">
+              <span class="r-label">دیتابیس D1:</span>
+              <span id="reviewD1Status" class="r-val">غیرفعال</span>
+            </div>
+            <div class="rev-row">
+              <span class="r-label">دامنه پیش‌فرض:</span>
+              <span class="r-val">فعال‌سازی روی workers.dev</span>
+            </div>
+          </div>
+
+          <div id="output" class="out-box out-idle hidden"></div>
+        </div>
+
+        <!-- دکمه‌های ناوبری -->
+        <div class="flex justify-between items-center gap-3 pt-5 border-t border-white/5">
+          <button type="button" id="prevBtn" onclick="prevStep()" class="btn-ghost hidden">→ مرحله قبل</button>
+          <button type="button" id="nextBtn" onclick="nextStep()" class="btn">مرحله بعد ←</button>
+          <button type="submit" id="submitBtn" class="btn hidden">🚀 شروع استقرار / به‌روزرسانی</button>
+        </div>
+      </form>
+
+      <!-- ═══════ تب بهینه‌ساز ساب‌لینک ═══════ -->
+      <div id="tab-content-sub" class="p-6 space-y-5 hidden">
+        <div class="flex items-start justify-between gap-3 flex-wrap border-b border-white/5 pb-4">
+          <div>
+            <h2 class="text-base font-extrabold" style="color:var(--neon)">⚡ بهینه‌ساز آنلاین ساب‌لینک</h2>
+            <p class="text-xs mt-1 leading-relaxed" style="color:var(--mut)">
+              تزریق خودکار Fragment، ساختارهای Cipher Suites و ECH بدون تغییر دستی کانفیگ‌ها
+            </p>
+          </div>
+          <span class="req-badge">/api/sub</span>
+        </div>
+
+        <div class="space-y-4">
+          <div>
+            <label class="field-label" for="optSubInput">آدرس ساب‌لینک اصلی (Direct Sub URL) <span class="text-[10px]" style="color:var(--fire)">* اجباری</span></label>
+            <input type="url" id="optSubInput" dir="ltr" placeholder="https://example.com/sub/token..." class="inp" autocomplete="off" />
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="field-label" for="optHostInput">آدرس / کلین IP جایگزین (اختیاری)</label>
+              <input type="text" id="optHostInput" dir="ltr" placeholder="IP یا دامنه کلین" class="inp" autocomplete="off" />
+            </div>
+            <div>
+              <label class="field-label" for="optFpSelect">Fingerprint (uTLS)</label>
+              <select id="optFpSelect" class="inp">
+                <option value="">پیش‌فرض کانفیگ (دست نزن)</option>
+                <option value="chrome">chrome</option>
+                <option value="firefox">firefox</option>
+                <option value="safari">safari</option>
+                <option value="edge">edge</option>
+                <option value="random">random</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <label class="opt-row" for="optFragmentCheck">
+              <span>افزودن Fragment و Cipher Suites (دور زدن SNI Filtering)</span>
+              <input type="checkbox" id="optFragmentCheck" checked class="chk" />
+            </label>
+            <label class="opt-row" for="optEchCheck">
+              <span>تولید نسخه با رمزنگاری کلاینت‌هلو (ECH) چندگانه</span>
+              <input type="checkbox" id="optEchCheck" class="chk" />
+            </label>
+          </div>
+
+          <!-- آکاردئون تنظیمات پیشرفته -->
+          <div class="border border-white/10 overflow-hidden" style="background:rgba(13,12,10,.6)">
+            <button type="button" onclick="toggleAdvancedOptParams()" class="acc-head">
+              <span class="flex items-center gap-2">
+                <span>⚙️</span>
+                <span>تنظیمات پیشرفته حرفه‌ای (Custom Fragment, CS, ECH, Template)</span>
+              </span>
+              <svg id="advOptArrow" class="acc-arrow w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </button>
+
+            <div id="advOptFields" class="acc-body hidden space-y-4 text-xs">
+              <div>
+                <label class="field-label" for="optCsInput">Cipher Suites (<code style="color:var(--fire)">cs</code>):</label>
+                <textarea id="optCsInput" rows="2" dir="ltr" class="inp"></textarea>
+              </div>
+
+              <div>
+                <div class="field-label">
+                  <label for="optFmInput">FinalMask / Fragment JSON (<code style="color:var(--fire)">fm</code>):</label>
+                  <span id="fmValidationMsg" class="text-[10px]" style="color:var(--neon);font-family:var(--mono)">JSON معتبر ✓</span>
+                </div>
+                <textarea id="optFmInput" rows="3" dir="ltr" oninput="validateCustomFm()" class="inp"></textarea>
+              </div>
+
+              <div>
+                <label class="field-label" for="optEchListInput">لیست سرورهای ECH (هر خط یک ECH):</label>
+                <textarea id="optEchListInput" rows="2" dir="ltr" class="inp"></textarea>
+              </div>
+
+              <div>
+                <label class="field-label" for="optSuffixInput">الگوی نام‌گذاری کانفیگ‌ها (Suffix Template):</label>
+                <input type="text" id="optSuffixInput" dir="ltr" value=" ECH {ip}" placeholder=" ECH {ip}" class="inp" autocomplete="off" />
+                <p class="text-[10px] mt-1" style="color:var(--dim)">پلیس‌هولدرها: <code style="color:var(--fire);font-family:var(--mono)">{name}</code> · <code style="color:var(--fire);font-family:var(--mono)">{ip}</code> · <code style="color:var(--fire);font-family:var(--mono)">{domain}</code> · <code style="color:var(--fire);font-family:var(--mono)">{type}</code></p>
+              </div>
+
+              <div class="flex justify-end">
+                <button type="button" onclick="resetAdvancedOptDefaults()" class="btn-link">↺ بازنشانی مقادیر پیش‌فرض</button>
+              </div>
+            </div>
+          </div>
+
+          <button type="button" onclick="generateAdvancedSubLink()" class="btn w-full">
+            ⚡ تولید ساب‌لینک بهینه‌شده اختصاصی
+          </button>
+        </div>
+
+        <div id="optSubResult" class="hidden pt-2 space-y-2 border-t border-white/5">
+          <span class="text-[11px] font-bold" style="color:var(--neon)">✅ لینک ساب‌اسکریپشن بهینه‌شده شما با موفقیت تولید شد:</span>
+          <div class="link-row">
+            <span id="optGeneratedUrl" style="font-family:var(--mono);font-size:11.5px;color:var(--neon);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;user-select:all"></span>
+            <button type="button" onclick="copyToClipboard(document.getElementById('optGeneratedUrl').innerText, this)" class="btn-mono" style="flex:none">کپی آدرس</button>
+          </div>
+          <p class="text-[11px] leading-relaxed" style="color:var(--dim)">
+            💡 کافیست این آدرس را مانند یک ساب معمولی به نرم‌افزارهای V2rayNG، Streisand یا Happ اضافه کنید.
+          </p>
+        </div>
+      </div>
+
+      <!-- ═══════ تب آنالیز هوش مصنوعی ═══════ -->
+      <div id="tab-content-ai" class="p-6 space-y-5 hidden">
+        <div class="flex items-start justify-between gap-3 flex-wrap border-b border-white/5 pb-4">
+          <div>
+            <h2 class="text-base font-extrabold" style="color:var(--fire)">🧠 استخراج هوشمند رشته‌های پراکسی با هوش مصنوعی</h2>
+            <p class="text-xs mt-1 leading-relaxed" style="color:var(--mut)">
+              آنالیز تخصصی سورس کد و استخراج تمام متغیرها و رشته‌های مرتبط با V2Ray، Xray، Sing-box و Clash
+            </p>
+          </div>
+          <span class="req-badge-fire">GEMINI</span>
+        </div>
+
+        <div class="space-y-4">
+          <div>
+            <label class="field-label" for="aiScriptUrl">آدرس مستقیم سورس کد ورکر (Raw URL) <span class="text-[10px]" style="color:var(--fire)">* اجباری</span></label>
+            <input type="url" id="aiScriptUrl" dir="ltr" placeholder="https://raw.githubusercontent.com/.../worker.js" class="inp" autocomplete="off" />
+          </div>
+
+          <div>
+            <div class="field-label">
+              <label for="aiGeminiKey">کلید اختصاصی Google Gemini API <span class="text-[10px]" style="color:var(--fire)">* اجباری</span></label>
+              <span class="flex items-center gap-3">
+                <button type="button" id="clearAiKeyBtn" onclick="clearStoredAiKey()" class="btn-link-err hidden">✕ پاک کردن کلید</button>
+                <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="btn-link">دریافت کلید از گوگل ↗</a>
+              </span>
+            </div>
+            <input type="password" id="aiGeminiKey" dir="ltr" placeholder="AIzaSy..." class="inp" autocomplete="off" />
+            <label class="flex items-center gap-2 cursor-pointer select-none pt-2">
+              <input type="checkbox" id="saveAiKeyCheck" class="chk" checked />
+              <span class="text-xs" style="color:var(--mut)">ذخیره امن و انکودشده کلید در مرورگر برای استفاده‌های بعدی</span>
+            </label>
+          </div>
+
+          <button type="button" id="aiAnalyzeBtn" onclick="runAiAnalysis()" class="btn w-full">
+            🔍 شروع آنالیز و استخراج رشته‌ها
+          </button>
+        </div>
+
+        <div id="aiStatus" class="out-box out-idle hidden"></div>
+
+        <!-- نتیجه مرتب و دسته‌بندی‌شده آنالیز -->
+        <div id="aiResultContainer" class="hidden space-y-3 pt-1">
+          <!-- خلاصه تحلیل -->
+          <div class="ai-card" style="border-color:rgba(255,77,0,.3)">
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-xs font-bold" style="color:var(--fire)">خلاصه کارکرد و تحلیل ساختار ورکر:</span>
+              <span class="ai-count">AI&nbsp;INSPECTION</span>
+            </div>
+            <p id="aiSummary" class="text-xs leading-relaxed" style="color:var(--body-txt)" dir="auto"></p>
+          </div>
+
+          <!-- پروتکل‌ها و مسیرها -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="ai-card">
+              <span class="ai-card-title"><span>🛡️</span><span>پروتکل‌های شناسایی‌شده:</span></span>
+              <div id="aiProtocols" dir="ltr" class="flex flex-wrap gap-1.5 mt-2 text-left"></div>
+            </div>
+            <div class="ai-card">
+              <span class="ai-card-title"><span>🌐</span><span>مسیرهای روت و پنل (Paths):</span></span>
+              <div id="aiPaths" dir="ltr" class="flex flex-wrap gap-1.5 mt-2 text-left"></div>
+            </div>
+          </div>
+
+          <!-- کلیدها و UUID -->
+          <div class="ai-card">
+            <div class="flex justify-between items-center">
+              <span class="ai-card-title"><span>🔑</span><span>کلیدها، UUID و پسوردهای پیش‌فرض:</span></span>
+              <span id="aiKeysCount" class="ai-count"></span>
+            </div>
+            <div id="aiKeys" dir="ltr" class="flex flex-wrap gap-1.5 mt-2 text-left"></div>
+          </div>
+
+          <!-- هاست‌ها و کلین آی‌پی -->
+          <div class="ai-card">
+            <div class="flex justify-between items-center">
+              <span class="ai-card-title"><span>📡</span><span>هاست‌ها، SNI و آدرس سرورها (Hosts &amp; Clean IPs):</span></span>
+              <span id="aiHostsCount" class="ai-count"></span>
+            </div>
+            <div id="aiHosts" dir="ltr" class="flex flex-wrap gap-1.5 mt-2 text-left" style="max-height:9rem;overflow-y:auto"></div>
+          </div>
+
+          <!-- ترنسپورت و شبکه -->
+          <div class="ai-card">
+            <span class="ai-card-title"><span>⚙️</span><span>تنظیمات شبکه و ترنسپورت (Transport / Cipher):</span></span>
+            <div id="aiTransport" dir="ltr" class="flex flex-wrap gap-1.5 mt-2 text-left" style="max-height:7rem;overflow-y:auto"></div>
+          </div>
+
+          <!-- باکس تمام رشته‌های پراکسی -->
+          <div class="ai-card">
+            <div class="flex justify-between items-center gap-2 flex-wrap">
+              <span class="text-xs font-bold flex items-center gap-1.5" style="color:var(--body-txt)">
+                <span>📦</span><span>تمام رشته‌های مرتبط با پراکسی (all_proxy_related_strings):</span>
+              </span>
+              <span class="flex items-center gap-2">
+                <span id="aiAllStringsCount" class="ai-count"></span>
+                <button type="button" onclick="copyOnlyAllProxyStrings()" class="btn-mono">📋 کپی این لیست</button>
+              </span>
+            </div>
+            <div id="aiAllStringsTags" dir="ltr" class="flex flex-wrap gap-1.5 text-left mt-2 p-2" style="max-height:12rem;overflow-y:auto;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.06)"></div>
+          </div>
+
+          <!-- ژنراتور پرامپت تعویض رشته‌ها -->
+          <div class="ai-card" style="border-color:rgba(255,77,0,.35)">
+            <div class="flex items-center justify-between gap-2 flex-wrap mb-2">
+              <div class="flex items-center gap-1.5 text-xs font-bold" style="color:var(--fire)">
+                <span>🪄</span><span>پرامپت آماده هوش مصنوعی برای جایگزینی کامل رشته‌ها:</span>
+              </div>
+              <button type="button" onclick="copyGeneratedPrompt()" id="copyPromptBtn" class="btn-mono">📋 کپی پرامپت آماده</button>
+            </div>
+            <p class="text-[11px] leading-relaxed mb-2" style="color:var(--mut)">
+              این پرامپت به‌صورت خودکار با لیست رشته‌های استخراج‌شده ساخته می‌شود. کافیست آن را کپی کرده و به‌همراه سورس ورکر خود به ChatGPT یا Claude بفرستید تا تمام مقادیر لو رفته ری‌برند و استتار شوند:
+            </p>
+            <textarea id="aiGeneratedPrompt" rows="6" dir="ltr" readonly class="inp" style="line-height:1.8"></textarea>
+          </div>
+
+          <!-- خروجی کامل JSON -->
+          <div class="space-y-1.5">
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-bold" style="color:var(--mut)">خروجی کامل آنالیز (Full Raw JSON):</span>
+              <button type="button" onclick="copyAllAiStrings()" class="btn-link">کپی کل JSON</button>
+            </div>
+            <textarea id="aiRawJsonOutput" rows="5" dir="ltr" readonly class="inp" style="color:#7dffca;line-height:1.8"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- فوتر کارت -->
+      <div class="px-6 py-4 border-t border-white/5 flex items-center justify-center">
+        <div class="foot" style="margin-top:0">
+          <span class="dot"></span>
+          <span>ARAL&nbsp;CF&nbsp;·&nbsp;CLOUDFLARE&nbsp;WORKERS&nbsp;·&nbsp;D1&nbsp;·&nbsp;KV</span>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    /* ============================================================
+       ARAL CF — منطق برنامه (vanilla JS)
+       بخش‌ها: کش امن، الگوها، تب‌ها، استپر، بهینه‌ساز ساب، آنالیز AI
+       ============================================================ */
+
+    /* ---------- ۱. کش امن انکودشده در localStorage ---------- */
+    const STORAGE_KEY = 0x3b;
+
+    function encodeStorage(str) {
+      if (!str) return '';
+      const bytes = new TextEncoder().encode(str);
+      const xor = new Uint8Array(bytes.length);
+      for (let i = 0; i < bytes.length; i++) {
+        xor[i] = bytes[i] ^ (STORAGE_KEY ^ (i % 7));
+      }
+      let binary = '';
+      for (let i = 0; i < xor.byteLength; i++) {
+        binary += String.fromCharCode(xor[i]);
+      }
+      return btoa(binary);
+    }
+
+    function decodeStorage(b64) {
+      if (!b64) return '';
+      try {
+        const binary = atob(b64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i) ^ (STORAGE_KEY ^ (i % 7));
+        }
+        return new TextDecoder().decode(bytes);
+      } catch {
+        return '';
+      }
+    }
+
+    /* ---------- ۲. الگوهای آماده استقرار (Presets) ---------- */
+    const PRESETS = {
+      nahan: {
+        url: 'https://raw.githubusercontent.com/itsyebekhe/nahan/refs/heads/main/worker.encoded.js',
+        binding: 'IOT_DB',
+        obfuscate: false,
+        recreate: true,
+        enableD1: true,
+      },
+      nahanmini: {
+        url: 'https://raw.githubusercontent.com/itsyebekhe/NahanMini/main/src/worker.js',
+        binding: 'DB',
+        obfuscate: true,
+        recreate: true,
+        enableD1: true,
+      },
+      zeus: {
+        url: 'https://raw.githubusercontent.com/panel-zeus/Z-E-U-S/refs/heads/main/Source.js',
+        binding: 'DB',
+        obfuscate: true,
+        recreate: true,
+        enableD1: true,
+      },
+      custom: {
+        url: '',
+        binding: 'DB',
+        obfuscate: true,
+        recreate: false,
+        enableD1: false,
+      }
+    };
+
+    function selectPreset(type) {
+      const p = PRESETS[type];
+      if (!p) return;
+
+      // هایلایت دکمه الگوی انتخاب‌شده
+      ['nahan', 'nahanmini', 'zeus', 'custom'].forEach(t => {
+        const btn = document.getElementById(`btn-preset-${t}`);
+        if (btn) btn.classList.toggle('active', t === type);
+      });
+
+      // بارگذاری کامل تنظیمات الگو
+      document.getElementById('scriptUrl').value = p.url;
+      document.getElementById('bindingName').value = p.binding;
+      document.getElementById('recreateWorker').checked = p.recreate;
+      document.getElementById('enableD1').checked = p.enableD1;
+
+      // قفل کردن مبهم‌سازی برای نهان (سورس از پیش انکود شده است)
+      const obfCheckbox = document.getElementById('enableObfuscation');
+      const nahanBadge = document.getElementById('nahanObfBadge');
+      const obfSubtext = document.getElementById('obfSubtext');
+      const obfLabel = document.getElementById('obfuscationLabel');
+
+      if (type === 'nahan') {
+        obfCheckbox.checked = false;
+        obfCheckbox.disabled = true;
+        nahanBadge.classList.remove('hidden');
+        obfSubtext.innerText = 'این سورس کد به صورت رسمی انکود شده است و نیازی به مبهم‌سازی مجدد ندارد.';
+        obfLabel.classList.add('locked');
+      } else {
+        obfCheckbox.disabled = false;
+        obfCheckbox.checked = p.obfuscate;
+        nahanBadge.classList.add('hidden');
+        obfSubtext.innerText = 'رمزنگاری رشته‌ها با XOR/Base64 برای جلوگیری از خوانده‌شدن سورس کد';
+        obfLabel.classList.remove('locked');
+      }
+
+      // در حالت سفارشی، نام دیتابیس خالی می‌شود
+      if (type === 'custom') {
+        document.getElementById('d1Name').value = '';
+      }
+
+      toggleD1Fields();
+    }
+
+    /* ---------- ۳. بارگذاری اولیه صفحه ---------- */
+    window.addEventListener('DOMContentLoaded', () => {
+      // ۱. ریست فرم برای جلوگیری از تداخل کش مرورگر
+      document.getElementById('wizardForm').reset();
+
+      // ۲. انتخاب پیش‌فرض: نهان
+      selectPreset('nahan');
+
+      // ۳. بازیابی اطلاعات ذخیره‌شده حساب کلودفلر و کلید AI
+      const savedAcc = localStorage.getItem('_cf_acc_enc');
+      const savedTok = localStorage.getItem('_cf_tok_enc');
+      const savedAiKey = localStorage.getItem('_gemini_key_enc');
+
+      if (savedAcc && savedTok) {
+        document.getElementById('accountId').value = decodeStorage(savedAcc);
+        document.getElementById('apiToken').value = decodeStorage(savedTok);
+        document.getElementById('clearStorageBtn').classList.remove('hidden');
+      }
+
+      if (savedAiKey) {
+        document.getElementById('aiGeminiKey').value = decodeStorage(savedAiKey);
+        const clearBtn = document.getElementById('clearAiKeyBtn');
+        if (clearBtn) clearBtn.classList.remove('hidden');
+      }
+
+      // ۴. خواندن پارامترها از لینک و اعمال آن‌ها (لینک‌سازی آماده)
+      const urlParams = new URLSearchParams(window.location.search);
+      const getParam = (...keys) => {
+        for (const k of keys) {
+          if (urlParams.has(k)) return urlParams.get(k);
+        }
+        return null;
+      };
+
+      const pPreset = getParam('preset');
+      if (pPreset && PRESETS[pPreset.toLowerCase()]) {
+        selectPreset(pPreset.toLowerCase());
+      }
+
+      const pAcc = getParam('account_id', 'accountId');
+      const pTok = getParam('token', 'apiToken', 'apiKey');
+      const pWorker = getParam('worker_name', 'workerName', 'name');
+      const pUrl = getParam('script_url', 'scriptUrl', 'url');
+      const pD1 = getParam('d1_name', 'd1Name', 'd1');
+      const pBinding = getParam('binding_name', 'bindingName', 'binding');
+      const pObf = getParam('obfuscate', 'enableObfuscation');
+      const pRecreate = getParam('recreate', 'rebuild', 'clean');
+
+      if (pAcc) document.getElementById('accountId').value = pAcc;
+      if (pTok) document.getElementById('apiToken').value = pTok;
+      if (pWorker) document.getElementById('workerName').value = pWorker;
+
+      if (pUrl) {
+        document.getElementById('scriptUrl').value = pUrl;
+      }
+
+      if (pD1 !== null || pBinding !== null) {
+        document.getElementById('enableD1').checked = true;
+        toggleD1Fields();
+        if (pD1) document.getElementById('d1Name').value = pD1;
+        if (pBinding) document.getElementById('bindingName').value = pBinding;
+      }
+
+      if (pObf !== null) {
+        document.getElementById('enableObfuscation').checked = (pObf === 'true' || pObf === '1');
+      }
+
+      if (pRecreate !== null) {
+        document.getElementById('recreateWorker').checked = (pRecreate === 'true' || pRecreate === '1');
+      }
+    });
+
+    /* ---------- ۴. مدیریت اطلاعات ذخیره‌شده حساب ---------- */
+    function saveOrClearCredentials() {
+      const shouldSave = document.getElementById('saveCredentials').checked;
+      const acc = document.getElementById('accountId').value.trim();
+      const tok = document.getElementById('apiToken').value.trim();
+
+      if (shouldSave && acc && tok) {
+        localStorage.setItem('_cf_acc_enc', encodeStorage(acc));
+        localStorage.setItem('_cf_tok_enc', encodeStorage(tok));
+        document.getElementById('clearStorageBtn').classList.remove('hidden');
+      } else if (!shouldSave) {
+        clearStoredCredentials();
+      }
+    }
+
+    function clearStoredCredentials() {
+      localStorage.removeItem('_cf_acc_enc');
+      localStorage.removeItem('_cf_tok_enc');
+      document.getElementById('accountId').value = '';
+      document.getElementById('apiToken').value = '';
+      document.getElementById('clearStorageBtn').classList.add('hidden');
+    }
+
+    /* ---------- ۵. تولید نام‌های رندوم ---------- */
+    function generateRandomName() {
+      const words = ['fast', 'turbo', 'sky', 'pixel', 'smart', 'flow', 'edge', 'shield'];
+      const pick = () => words[Math.floor(Math.random() * words.length)];
+      const num = Math.floor(Math.random() * 899) + 100;
+      document.getElementById('workerName').value = `${pick()}-${pick()}-${num}`;
+    }
+
+    function generateRandomD1Name() {
+      const prefixes = ['db', 'data', 'store', 'cloud', 'vault', 'aral'];
+      const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+      const num = Math.floor(Math.random() * 899) + 100;
+      document.getElementById('d1Name').value = `${pick(prefixes)}-${num}`;
+    }
+
+    function generateRandomKVName() {
+      const prefixes = ['kv', 'cache', 'store', 'session'];
+      const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+      const num = Math.floor(Math.random() * 899) + 100;
+      document.getElementById('kvName').value = `${pick(prefixes)}-${num}`;
+    }
+
+    /* ---------- ۶. سوییچ فیلدهای D1 و KV ---------- */
+    function toggleD1Fields() {
+      const enabled = document.getElementById('enableD1').checked;
+      document.getElementById('d1Fields').classList.toggle('hidden', !enabled);
+      document.getElementById('d1Name').required = enabled;
+      document.getElementById('bindingName').required = enabled;
+    }
+
+    function toggleKVFields() {
+      const enabled = document.getElementById('enableKV').checked;
+      document.getElementById('kvFields').classList.toggle('hidden', !enabled);
+      document.getElementById('kvName').required = enabled;
+      document.getElementById('kvBindingName').required = enabled;
+    }
+
+    /* ---------- ۷. کپی در کلیپ‌بورد ---------- */
+    function copyToClipboard(text, btnElement) {
+      navigator.clipboard.writeText(text).then(() => {
+        const originalText = btnElement.innerText;
+        btnElement.innerText = 'کپی شد! ✓';
+        setTimeout(() => {
+          btnElement.innerText = originalText;
+        }, 2000);
+      });
+    }
+
+    /* ---------- ۸. سوییچ تب‌های اصلی ---------- */
+    function switchAppTab(tab) {
+      const wizardForm = document.getElementById('wizardForm');
+      const subTabContent = document.getElementById('tab-content-sub');
+      const aiTabContent = document.getElementById('tab-content-ai');
+      const stepperContainer = document.getElementById('deploy-stepper-container');
+
+      const btnDeploy = document.getElementById('tab-btn-deploy');
+      const btnSub = document.getElementById('tab-btn-sub');
+      const btnAi = document.getElementById('tab-btn-ai');
+
+      // ریست وضعیت نمایش تمام تب‌ها
+      wizardForm.classList.add('hidden');
+      subTabContent.classList.add('hidden');
+      aiTabContent.classList.add('hidden');
+      stepperContainer.classList.add('hidden');
+
+      btnDeploy.classList.remove('active', 'active-acc');
+      btnSub.classList.remove('active', 'active-acc');
+      btnAi.classList.remove('active', 'active-acc');
+
+      if (tab === 'deploy') {
+        wizardForm.classList.remove('hidden');
+        stepperContainer.classList.remove('hidden');
+        btnDeploy.classList.add('active');
+      } else if (tab === 'sub') {
+        subTabContent.classList.remove('hidden');
+        btnSub.classList.add('active-acc');
+      } else if (tab === 'ai') {
+        aiTabContent.classList.remove('hidden');
+        btnAi.classList.add('active');
+        // مقداردهی اولیه سورس از فیلد استقرار در صورت خالی بودن
+        const curScript = document.getElementById('scriptUrl').value.trim();
+        const aiUrlInput = document.getElementById('aiScriptUrl');
+        if (!aiUrlInput.value && curScript) aiUrlInput.value = curScript;
+      }
+    }
+
+    /* ---------- ۹. مدیریت استپر استقرار ---------- */
+    let currentStep = 1;
+    const totalSteps = 4;
+
+    function updateStepper() {
+      document.getElementById('stepBadge').innerText = `مرحله ${currentStep} از ${totalSteps}`;
+
+      for (let i = 1; i <= totalSteps; i++) {
+        document.getElementById(`bar-${i}`).classList.toggle('on', i <= currentStep);
+        document.getElementById(`step-${i}`).classList.toggle('hidden', i !== currentStep);
+      }
+
+      document.getElementById('prevBtn').classList.toggle('hidden', currentStep === 1);
+      document.getElementById('nextBtn').classList.toggle('hidden', currentStep === totalSteps);
+      document.getElementById('submitBtn').classList.toggle('hidden', currentStep !== totalSteps);
+
+      if (currentStep === 4) {
+        document.getElementById('reviewWorkerName').innerText = document.getElementById('workerName').value || '-';
+        document.getElementById('reviewObfuscation').innerText = document.getElementById('enableObfuscation').checked ? 'فعال (رمزگذاری با XOR)' : 'غیرفعال (کد خام)';
+        document.getElementById('reviewRecreate').innerText = document.getElementById('recreateWorker').checked ? 'نصب مجدد از صفر (Clean Rebuild)' : 'بروزرسانی مستقیم ورکر';
+        const cDom = document.getElementById('customDomain').value.trim();
+        document.getElementById('reviewCustomDomain').innerText = cDom || 'غیرفعال';
+        const d1Active = document.getElementById('enableD1').checked;
+        document.getElementById('reviewD1Status').innerText = d1Active
+          ? `${document.getElementById('d1Name').value} (متغیر بایندینگ: ${document.getElementById('bindingName').value})`
+          : 'غیرفعال';
+      }
+    }
+
+    function nextStep() {
+      if (currentStep === 1) {
+        if (!document.getElementById('accountId').checkValidity() || !document.getElementById('apiToken').checkValidity()) {
+          alert('لطفاً فیلد Account ID و API Token را تکمیل کنید.');
+          return;
+        }
+        saveOrClearCredentials();
+      } else if (currentStep === 2) {
+        if (!document.getElementById('workerName').checkValidity() || !document.getElementById('scriptUrl').checkValidity()) {
+          alert('لطفاً نام ورکر و آدرس فایل کدهای اسکریپت را وارد کنید.');
+          return;
+        }
+      } else if (currentStep === 3) {
+        if (document.getElementById('enableD1').checked) {
+          if (!document.getElementById('d1Name').value.trim() || !document.getElementById('bindingName').value.trim()) {
+            alert('لطفاً نام دیتابیس D1 و نام متغیر بایندینگ را مشخص کنید.');
+            return;
+          }
+        }
+      }
+
+      if (currentStep < totalSteps) {
+        currentStep++;
+        updateStepper();
+      }
+    }
+
+    function prevStep() {
+      if (currentStep > 1) {
+        currentStep--;
+        updateStepper();
+      }
+    }
+
+    /* ---------- ۱۰. آنالیز هوش مصنوعی (Gemini) ---------- */
+    function saveOrClearAiKey() {
+      const shouldSave = document.getElementById('saveAiKeyCheck').checked;
+      const key = document.getElementById('aiGeminiKey').value.trim();
+      const clearBtn = document.getElementById('clearAiKeyBtn');
+
+      if (shouldSave && key) {
+        localStorage.setItem('_gemini_key_enc', encodeStorage(key));
+        if (clearBtn) clearBtn.classList.remove('hidden');
+      } else if (!shouldSave) {
+        clearStoredAiKey();
+      }
+    }
+
+    function clearStoredAiKey() {
+      localStorage.removeItem('_gemini_key_enc');
+      document.getElementById('aiGeminiKey').value = '';
+      const clearBtn = document.getElementById('clearAiKeyBtn');
+      if (clearBtn) clearBtn.classList.add('hidden');
+    }
+
+    async function runAiAnalysis() {
+      const scriptUrl = document.getElementById('aiScriptUrl').value.trim();
+      const geminiApiKey = document.getElementById('aiGeminiKey').value.trim();
+      const statusEl = document.getElementById('aiStatus');
+      const btn = document.getElementById('aiAnalyzeBtn');
+      const resultContainer = document.getElementById('aiResultContainer');
+
+      if (!scriptUrl || !geminiApiKey) {
+        alert('لطفاً هم آدرس سورس کد ورکر و هم کلید Gemini API را وارد کنید.');
+        return;
+      }
+
+      saveOrClearAiKey();
+
+      statusEl.className = 'out-box out-idle';
+      statusEl.innerText = 'در حال دانلود سورس ورکر و پردازش عمیق توسط Gemini ... شکیبا باشید.';
+      statusEl.classList.remove('hidden');
+      resultContainer.classList.add('hidden');
+
+      btn.disabled = true;
+      btn.classList.add('opacity-50');
+
+      try {
+        const response = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scriptUrl, geminiApiKey }),
+        });
+
+        const resData = await response.json();
+
+        if (!response.ok || !resData.success) {
+          throw new Error(resData.error || 'خطا در تحلیل هوش مصنوعی');
+        }
+
+        const data = resData.analysis;
+        statusEl.className = 'out-box out-ok';
+        statusEl.innerText = `✅ آنالیز با موفقیت تکمیل شد! (${resData.codeSize.toLocaleString()} بایت کد پردازش شد)`;
+
+        document.getElementById('aiSummary').innerText = data.summary || 'توضیحی ثبت نشده است.';
+
+        const renderBadges = (items, containerId, countId, tagClass) => {
+          const container = document.getElementById(containerId);
+          if (!container) return;
+          container.innerHTML = '';
+
+          if (countId) {
+            const countEl = document.getElementById(countId);
+            if (countEl) countEl.innerText = items ? `${items.length} ITEMS` : '۰';
+          }
+
+          if (!items || items.length === 0) {
+            container.innerHTML = '<span class="tag-none">No values detected</span>';
+            return;
+          }
+
+          items.forEach(item => {
+            const span = document.createElement('span');
+            span.className = `tag ${tagClass}`;
+            span.innerText = item;
+            span.title = 'برای کپی کلیک کنید';
+            span.onclick = () => {
+              navigator.clipboard.writeText(item);
+              const orig = span.innerText;
+              span.innerText = 'Copied!';
+              setTimeout(() => { span.innerText = orig; }, 1200);
+            };
+            container.appendChild(span);
+          });
+        };
+
+        renderBadges(data.protocols, 'aiProtocols', null, 'tag-fire');
+        renderBadges(data.admin_and_sub_paths, 'aiPaths', null, 'tag-dim');
+        renderBadges(data.keys_and_passwords, 'aiKeys', 'aiKeysCount', 'tag-err');
+        renderBadges(data.hosts_and_clean_ips, 'aiHosts', 'aiHostsCount', 'tag-neon');
+        renderBadges(data.transport_and_network, 'aiTransport', null, 'tag-mut');
+
+        // رندر باکس اختصاصی all_proxy_related_strings
+        renderBadges(data.all_proxy_related_strings, 'aiAllStringsTags', 'aiAllStringsCount', 'tag-fire');
+
+        // تولید پرامپت مهندسی‌شده تعویض کامل رشته‌ها
+        const allStringsList = Array.isArray(data.all_proxy_related_strings)
+          ? data.all_proxy_related_strings
+          : [];
+
+        const generatedPromptText = `You are an expert code refactorer and software obfuscation specialist.
+I am providing you with my Cloudflare Worker proxy script along with a list of extracted proxy-related strings.
+Your task is to FULLY REPLACE, RENAME, and CAMOUFLAGE every single string from the list below in the source code.
+
+Rules:
+1. Replace proxy terminology, path names (e.g. /sub, /panel, /sync/dash), passwords, headers, protocol keywords, and variables with realistic, generic cloud services terminology (e.g. telemetry, cdn-metric, assets, healthcheck, iot-beacon).
+2. Generate fresh, realistic replacement values (e.g., new random UUIDs, new disguised path segments, randomized sub endpoints).
+3. Do NOT break the functionality or logical flow of the worker. Ensure sockets, WebSocket upgrades, and D1 database queries continue to execute seamlessly with the new mapped names.
+4. Output the complete refactored JavaScript code directly, followed by a concise mapping table showing what was replaced.
+
+Target strings to completely replace and neutralize:
+${JSON.stringify(allStringsList, null, 2)}
+
+[ATTACH YOUR WORKER SOURCE CODE BELOW THIS LINE]`;
+
+        document.getElementById('aiGeneratedPrompt').value = generatedPromptText;
+        document.getElementById('aiRawJsonOutput').value = JSON.stringify(data, null, 2);
+        resultContainer.classList.remove('hidden');
+
+      } catch (err) {
+        statusEl.className = 'out-box out-err';
+        statusEl.innerText = `❌ خطا در آنالیز سورس:\n${err.message}`;
+      } finally {
+        btn.disabled = false;
+        btn.classList.remove('opacity-50');
+      }
+    }
+
+    function copyAllAiStrings() {
+      const output = document.getElementById('aiRawJsonOutput');
+      if (!output || !output.value) return;
+      navigator.clipboard.writeText(output.value).then(() => {
+        alert('خروجی کامل JSON کپی شد!');
+      });
+    }
+
+    function copyOnlyAllProxyStrings() {
+      const tags = document.querySelectorAll('#aiAllStringsTags span');
+      const list = Array.from(tags).map(t => t.innerText);
+      if (list.length === 0) return;
+      navigator.clipboard.writeText(JSON.stringify(list, null, 2)).then(() => {
+        alert('لیست تمام رشته‌های پراکسی (all_proxy_related_strings) کپی شد!');
+      });
+    }
+
+    function copyGeneratedPrompt() {
+      const promptEl = document.getElementById('aiGeneratedPrompt');
+      const btn = document.getElementById('copyPromptBtn');
+      if (!promptEl || !promptEl.value) return;
+      navigator.clipboard.writeText(promptEl.value).then(() => {
+        const orig = btn.innerText;
+        btn.innerText = '✓ کپی شد!';
+        setTimeout(() => { btn.innerText = orig; }, 1800);
+      });
+    }
+
+    /* ---------- ۱۱. بهینه‌ساز ساب‌لینک ---------- */
+    const DEF_FM_STR = '{"tcp":[{"type":"fragment","settings":{"packets":"tlshello","lengths":["0","104","1"],"delays":["0"],"maxSplit":"0"}},{"type":"fragment","settings":{"packets":"1-1","lengths":["114","1"],"delays":["1"],"maxSplit":"11"}}]}';
+    const DEF_CS_STR = 'TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256:TLS_AES_128_GCM_SHA256:TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384:TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384:TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256:TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256:TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256:TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256:TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA:TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA:TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256:TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256';
+    const DEF_ECH_STR = 'cloudflare-ech.com+udp://1.1.1.1\ncloudflare-ech.com+udp://8.8.8.8';
+
+    function initAdvOptFields() {
+      const csEl = document.getElementById('optCsInput');
+      const fmEl = document.getElementById('optFmInput');
+      const echEl = document.getElementById('optEchListInput');
+      if (csEl && !csEl.value) csEl.value = DEF_CS_STR;
+      if (fmEl && !fmEl.value) fmEl.value = DEF_FM_STR;
+      if (echEl && !echEl.value) echEl.value = DEF_ECH_STR;
+    }
+    window.addEventListener('DOMContentLoaded', initAdvOptFields);
+
+    function toggleAdvancedOptParams() {
+      const el = document.getElementById('advOptFields');
+      const arrow = document.getElementById('advOptArrow');
+      const isHidden = el.classList.toggle('hidden');
+      arrow.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
+    }
+
+    function validateCustomFm() {
+      const val = document.getElementById('optFmInput').value.trim();
+      const msg = document.getElementById('fmValidationMsg');
+      try {
+        JSON.parse(val);
+        msg.innerText = 'JSON معتبر ✓';
+        msg.style.color = 'var(--neon)';
+        return true;
+      } catch {
+        msg.innerText = 'JSON نامعتبر ✗';
+        msg.style.color = 'var(--err)';
+        return false;
+      }
+    }
+
+    function resetAdvancedOptDefaults() {
+      document.getElementById('optCsInput').value = DEF_CS_STR;
+      document.getElementById('optFmInput').value = DEF_FM_STR;
+      document.getElementById('optEchListInput').value = DEF_ECH_STR;
+      document.getElementById('optSuffixInput').value = ' ECH {ip}';
+      validateCustomFm();
+    }
+
+    function generateAdvancedSubLink() {
+      const subUrl = document.getElementById('optSubInput').value.trim();
+      const customHost = document.getElementById('optHostInput').value.trim();
+      const fp = document.getElementById('optFpSelect').value;
+      const fragment = document.getElementById('optFragmentCheck').checked;
+      const ech = document.getElementById('optEchCheck').checked;
+
+      const cs = document.getElementById('optCsInput').value.trim();
+      const fm = document.getElementById('optFmInput').value.trim();
+      const echListRaw = document.getElementById('optEchListInput').value.trim();
+      const suffix = document.getElementById('optSuffixInput').value.trim();
+
+      if (!subUrl) {
+        alert('لطفاً آدرس ساب‌لینک را وارد کنید.');
+        return;
+      }
+
+      if (fm && !validateCustomFm()) {
+        alert('فرمت JSON در فیلد FinalMask نامعتبر است.');
+        return;
+      }
+
+      let finalUrl = `${window.location.origin}/api/sub?url=${encodeURIComponent(subUrl)}`;
+      if (customHost) finalUrl += `&host=${encodeURIComponent(customHost)}`;
+      if (fp) finalUrl += `&fp=${encodeURIComponent(fp)}`;
+      if (!fragment) finalUrl += `&fragment=0`;
+      if (ech) finalUrl += `&ech=1`;
+
+      // اگر کاربر مقادیر پیش‌فرض را شخصی‌سازی کرده باشد، به URL اضافه می‌شوند
+      if (cs && cs !== DEF_CS_STR) finalUrl += `&cs=${encodeURIComponent(cs)}`;
+      if (fm && fm !== DEF_FM_STR) finalUrl += `&fm=${encodeURIComponent(fm)}`;
+      if (suffix && suffix !== 'ECH {ip}') finalUrl += `&suffix=${encodeURIComponent(suffix)}`;
+
+      if (echListRaw && echListRaw !== DEF_ECH_STR) {
+        const echParam = echListRaw.split(/[\r\n]+/).map(x => x.trim()).filter(Boolean).join(',');
+        finalUrl += `&ech_list=${encodeURIComponent(echParam)}`;
+      }
+
+      document.getElementById('optGeneratedUrl').innerText = finalUrl;
+      document.getElementById('optSubResult').classList.remove('hidden');
+    }
+
+    /* ---------- ۱۲. عملیات نهایی استقرار ---------- */
+    document.getElementById('wizardForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      saveOrClearCredentials();
+
+      const output = document.getElementById('output');
+      const submitBtn = document.getElementById('submitBtn');
+      const prevBtn = document.getElementById('prevBtn');
+
+      output.className = 'out-box out-idle';
+      output.innerHTML = 'در حال ارتباط با بک‌اند کلودفلر، دانلود سورس و استقرار ورکر... لطفاً شکیبا باشید.';
+      output.classList.remove('hidden');
+
+      submitBtn.disabled = true;
+      prevBtn.disabled = true;
+      submitBtn.classList.add('opacity-50');
+
+      const payload = {
+        accountId: document.getElementById('accountId').value.trim(),
+        apiToken: document.getElementById('apiToken').value.trim(),
+        workerName: document.getElementById('workerName').value.trim(),
+        scriptUrl: document.getElementById('scriptUrl').value.trim(),
+        customDomain: document.getElementById('customDomain').value.trim() || null,
+        enableObfuscation: document.getElementById('enableObfuscation').checked,
+        recreateWorker: document.getElementById('recreateWorker').checked,
+        d1Name: document.getElementById('enableD1').checked ? document.getElementById('d1Name').value.trim() : null,
+        bindingName: document.getElementById('enableD1').checked ? document.getElementById('bindingName').value.trim() : null,
+        kvName: document.getElementById('enableKV').checked ? document.getElementById('kvName').value.trim() : null,
+        kvBindingName: document.getElementById('enableKV').checked ? document.getElementById('kvBindingName').value.trim() : null,
+      };
+
+      try {
+        const response = await fetch('/api/deploy', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(payload),
+        });
+
+        let result;
+        try {
+          result = await response.json();
+        } catch {
+          throw new Error(`پاسخ سرور در قالب JSON نبود (کد وضعیت: ${response.status})`);
+        }
+
+        if (result.success) {
+          output.className = 'out-box out-ok';
+
+          // تعیین مسیر پنل بر اساس سورس کد یا متغیر بایندینگ
+          let panelUrl = result.workerUrl;
+          const currentBinding = document.getElementById('bindingName').value.trim();
+          const currentUrl = document.getElementById('scriptUrl').value.trim();
+
+          const isNahanMini = currentUrl.includes('NahanMini') || currentUrl.includes('nahanmini');
+          const isNahan = !isNahanMini && (currentBinding === 'IOT_DB' || currentUrl.includes('nahan'));
+
+          if (panelUrl) {
+            if (isNahanMini) {
+              panelUrl = panelUrl.replace(/\/+$/, '') + '/login';
+            } else if (isNahan) {
+              panelUrl = panelUrl.replace(/\/+$/, '') + '/sync/dash';
+            } else if (currentBinding === 'DB' || currentUrl.includes('zeus') || currentUrl.includes('Z-E-U-S')) {
+              panelUrl = panelUrl.replace(/\/+$/, '') + '/panel';
+            }
+          }
+
+          let html = `
+            <div class="flex items-center gap-2 text-sm font-bold mb-2" style="color:var(--neon)">
+              <span>عملیات با موفقیت انجام شد! 🎉</span>
+            </div>
+            <div class="space-y-1.5 text-xs">
+              <div>نام ورکر: <span style="color:#fff;font-weight:700">${result.workerName}</span></div>
+              <div>وضعیت نصب: <span style="color:#fff">${result.recreated ? 'حذف و بازسازی مجدد از ابتدا (Clean)' : 'به‌روزرسانی مستقیم'}</span></div>
+              <div>مبهم‌سازی سورس: <span style="color:#fff">${result.obfuscated ? 'فعال شد' : 'غیرفعال'}</span></div>
+              ${result.d1DatabaseId ? `<div>دیتابیس D1 متصل شد (UUID): <span style="color:var(--neon)">${result.d1DatabaseId}</span></div>` : '<div>دیتابیس D1: بدون دیتابیس</div>'}
+              ${isNahan ? `<div class="mt-2 p-2 rounded font-sans" style="background:rgba(0,255,157,.08);border:1px solid rgba(0,255,157,.3);color:#a9ffd9">🔑 <b>رمز عبور پیش‌فرض پنل نهان:</b> <code style="background:rgba(0,0,0,.5);padding:1px 6px;color:var(--fire);user-select:all">admin</code></div>` : ''}
+              ${isNahanMini ? `<div class="mt-2 p-2 rounded font-sans" style="background:rgba(0,255,157,.08);border:1px solid rgba(0,255,157,.3);color:#a9ffd9">🔑 <b>رمز عبور پیش‌فرض پنل نهان‌مینی:</b> <code style="background:rgba(0,0,0,.5);padding:1px 6px;color:var(--fire);user-select:all">admin123</code></div>` : ''}
+            </div>
+          `;
+
+          // اولویت دادن به آدرس دامنه اختصاصی نسبت به workers.dev
+          const primaryHost = result.customDomainUrl || result.workerUrl;
+          let panelPrimaryUrl = primaryHost;
+
+          if (panelPrimaryUrl) {
+            if (isNahanMini) {
+              panelPrimaryUrl = panelPrimaryUrl.replace(/\/+$/, '') + '/login';
+            } else if (isNahan) {
+              panelPrimaryUrl = panelPrimaryUrl.replace(/\/+$/, '') + '/sync/dash';
+            } else if (currentBinding === 'DB' || currentUrl.includes('zeus') || currentUrl.includes('Z-E-U-S')) {
+              panelPrimaryUrl = panelPrimaryUrl.replace(/\/+$/, '') + '/panel';
+            }
+          }
+
+          if (result.customDomainError) {
+            html += `
+              <div class="mt-2 p-2 text-xs" style="background:rgba(255,77,0,.08);border:1px solid var(--line);color:#ffb888">
+                ⚠️ هشدار دامنه اختصاصی: ${result.customDomainError} (می‌توانید از دامنه workers.dev استفاده کنید).
+              </div>
+            `;
+          }
+
+          if (panelPrimaryUrl) {
+            html += `
+              <div class="mt-4 pt-3" style="border-top:1px solid rgba(0,255,157,.2)">
+                <div class="text-xs mb-1.5 font-medium flex items-center justify-between" style="color:var(--body-txt)">
+                  <span>آدرس ورود به پنل مدیریت:</span>
+                  ${result.customDomainUrl ? '<span style="font-size:10px;background:rgba(0,255,157,.12);color:var(--neon);padding:1px 8px;font-family:var(--mono)">CUSTOM DOMAIN ✓</span>' : ''}
+                </div>
+                <div class="link-row">
+                  <a href="${panelPrimaryUrl}" target="_blank" rel="noopener noreferrer">${panelPrimaryUrl}</a>
+                  <div class="flex items-center gap-1" style="flex:none">
+                    <button type="button" onclick="copyToClipboard('${panelPrimaryUrl}', this)" class="btn-mono">کپی آدرس</button>
+                    <a href="${panelPrimaryUrl}" target="_blank" rel="noopener noreferrer" class="btn-mono" style="color:#000;background:var(--fire);border-color:var(--fire);font-weight:700">ورود به پنل ↗</a>
+                  </div>
+                </div>
+              </div>
+            `;
+          }
+
+          output.innerHTML = html;
+        } else {
+          throw new Error(result.error || 'خطایی در استقرار رخ داد.');
+        }
+      } catch (err) {
+        output.className = 'out-box out-err';
+        output.innerText = `خطا در فرایند استقرار:\n${err.message}`;
+      } finally {
+        submitBtn.disabled = false;
+        prevBtn.disabled = false;
+        submitBtn.classList.remove('opacity-50');
+      }
+    });
+
+    /* ---------- ۱۳. پری‌لودر بوت ---------- */
+    window.addEventListener('load', () => {
+      const pre = document.getElementById('preloader');
+      setTimeout(() => {
+        pre.classList.add('off');
+        setTimeout(() => pre.remove(), 600);
+      }, 550);
+    });
+    // اطمینان: پری‌لودر هیچ‌وقت صفحه را قفل نکند
+    setTimeout(() => {
+      const pre = document.getElementById('preloader');
+      if (pre) { pre.classList.add('off'); setTimeout(() => pre.remove(), 700); }
+    }, 2600);
+  </script>
+</body>
+</html>
